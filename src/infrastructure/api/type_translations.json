@@ -1,0 +1,164 @@
+{
+  "normal": {
+    "id": 1,
+    "fr": "Normal",
+    "en": "Normal",
+    "de": "Normal",
+    "es": "Normal",
+    "it": "Normale",
+    "jp": "ノーマル"
+  },
+  "fire": {
+    "id": 10,
+    "fr": "Feu",
+    "en": "Fire",
+    "de": "Feuer",
+    "es": "Fuego",
+    "it": "Fuoco",
+    "jp": "ほのお"
+  },
+  "water": {
+    "id": 11,
+    "fr": "Eau",
+    "en": "Water",
+    "de": "Wasser",
+    "es": "Agua",
+    "it": "Acqua",
+    "jp": "みず"
+  },
+  "electric": {
+    "id": 13,
+    "fr": "Électrik",
+    "en": "Electric",
+    "de": "Elektro",
+    "es": "Eléctrico",
+    "it": "Elettro",
+    "jp": "でんき"
+  },
+  "grass": {
+    "id": 12,
+    "fr": "Plante",
+    "en": "Grass",
+    "de": "Pflanze",
+    "es": "Planta",
+    "it": "Erba",
+    "jp": "くさ"
+  },
+  "ice": {
+    "id": 15,
+    "fr": "Glace",
+    "en": "Ice",
+    "de": "Eis",
+    "es": "Hielo",
+    "it": "Ghiaccio",
+    "jp": "こおり"
+  },
+  "fighting": {
+    "id": 2,
+    "fr": "Combat",
+    "en": "Fighting",
+    "de": "Kampf",
+    "es": "Lucha",
+    "it": "Lotta",
+    "jp": "かくとう"
+  },
+  "poison": {
+    "id": 4,
+    "fr": "Poison",
+    "en": "Poison",
+    "de": "Gift",
+    "es": "Veneno",
+    "it": "Veleno",
+    "jp": "どく"
+  },
+  "ground": {
+    "id": 5,
+    "fr": "Sol",
+    "en": "Ground",
+    "de": "Boden",
+    "es": "Tierra",
+    "it": "Terra",
+    "jp": "じめん"
+  },
+  "flying": {
+    "id": 3,
+    "fr": "Vol",
+    "en": "Flying",
+    "de": "Flug",
+    "es": "Volador",
+    "it": "Volante",
+    "jp": "ひこう"
+  },
+  "psychic": {
+    "id": 14,
+    "fr": "Psy",
+    "en": "Psychic",
+    "de": "Psycho",
+    "es": "Psíquico",
+    "it": "Psico",
+    "jp": "エスパー"
+  },
+  "bug": {
+    "id": 7,
+    "fr": "Insecte",
+    "en": "Bug",
+    "de": "Käfer",
+    "es": "Bicho",
+    "it": "Coleottero",
+    "jp": "むし"
+  },
+  "rock": {
+    "id": 6,
+    "fr": "Roche",
+    "en": "Rock",
+    "de": "Gestein",
+    "es": "Roca",
+    "it": "Roccia",
+    "jp": "いわ"
+  },
+  "ghost": {
+    "id": 8,
+    "fr": "Spectre",
+    "en": "Ghost",
+    "de": "Geist",
+    "es": "Fantasma",
+    "it": "Spettro",
+    "jp": "ゴースト"
+  },
+  "dragon": {
+    "id": 16,
+    "fr": "Dragon",
+    "en": "Dragon",
+    "de": "Drache",
+    "es": "Dragón",
+    "it": "Drago",
+    "jp": "ドラゴン"
+  },
+  "dark": {
+    "id": 17,
+    "fr": "Ténèbres",
+    "en": "Dark",
+    "de": "Unlicht",
+    "es": "Siniestro",
+    "it": "Buio",
+    "jp": "あく"
+  },
+  "steel": {
+    "id": 9,
+    "fr": "Acier",
+    "en": "Steel",
+    "de": "Stahl",
+    "es": "Acero",
+    "it": "Acciaio",
+    "jp": "はがね"
+  },
+  "fairy": {
+    "id": 18,
+    "fr": "Fée",
+    "en": "Fairy",
+    "de": "Fee",
+    "es": "Hada",
+    "it": "Folletto",
+    "jp": "フェアリー"
+  }
+}

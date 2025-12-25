@@ -1,0 +1,46 @@
+# Requirements.txt - Pokémon Analyzer
+# ============================================
+#
+# ⚠️ IMPORTANT :
+# Ce fichier est UNIQUEMENT nécessaire pour les DÉVELOPPEURS qui souhaitent
+# modifier le code source et exécuter l'application avec Python.
+#
+# Si vous utilisez l'exécutable PokemonAnalyzer.exe, vous n'avez RIEN à installer !
+# Toutes les dépendances sont déjà incluses dans l'exécutable.
+#
+# Installation (développeurs uniquement) :
+# pip install -r src/requirements.txt
+#
+# ============================================
+
+# ===== Interface Graphique =====
+PySide6>=6.5.0
+
+# ===== Traitement d'Images =====
+opencv-python>=4.8.0
+Pillow>=10.0.0
+numpy>=1.24.0
+
+# ===== OCR - Reconnaissance de Texte =====
+pytesseract>=0.3.10
+
+# ===== Capture d'Écran =====
+mss>=9.0.0
+
+# ===== API et Réseau =====
+requests>=2.31.0
+urllib3>=2.0.0
+
+# ===== Pour Créer l'Exécutable =====
+# pyinstaller>=6.0.0  # Décommentez pour compiler l'exe
+# nuitka>=1.8.0       # Alternative à PyInstaller (plus petit et rapide)
+
+# ===== Notes pour Développeurs =====
+# 1. Tesseract OCR doit être installé sur votre système (développement uniquement)
+#    Windows: https://github.com/UB-Mannheim/tesseract/wiki
+#    Linux: sudo apt install tesseract-ocr
+#    macOS: brew install tesseract
+#
+# 2. L'exécutable PokemonAnalyzer.exe INCLUT déjà Tesseract - pas d'installation requise !
+#
+# 3. Connexion Internet REQUISE : L'application utilise PokéAPI pour les données Pokémon
