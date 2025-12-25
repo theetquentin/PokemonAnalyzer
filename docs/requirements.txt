@@ -11,5 +11,4 @@ sphinx-autodoc-typehints>=1.19.0
 
 # Pour que Sphinx puisse importer le code source
 # (même si on ne build pas l'app)
-PySide6>=6.5.0
 requests>=2.31.0

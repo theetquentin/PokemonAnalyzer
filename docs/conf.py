@@ -59,6 +59,16 @@ typehints_document_rtype = True
 templates_path = ['_templates']
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
+# Mock modules to avoid install requirements during doc build
+autodoc_mock_imports = [
+    'PySide6',
+    'cv2',
+    'mss',
+    'pytesseract',
+    'numpy',
+    'PIL',
+]
+
 language = 'fr'
 
 # -- Options for HTML output -------------------------------------------------
