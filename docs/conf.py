@@ -71,6 +71,15 @@ autodoc_mock_imports = [
 
 language = 'fr'
 
+# -- Options for LaTeX output ------------------------------------------------
+latex_engine = 'xelatex'
+latex_elements = {
+    'preamble': r'''
+\usepackage{fontspec}
+\usepackage{bookmark}
+''',
+}
+
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
