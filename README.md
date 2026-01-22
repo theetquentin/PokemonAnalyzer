@@ -198,7 +198,7 @@ Ce projet n'est pas affilié, sponsorisé ou approuvé par Nintendo, Game Freak 
 
 ## 🙏 Remerciements
 
-- Smirn(https://github.com/Smirn-Ewan) pour l'idée de l'application et la correction de bugs
+- [Smirn](https://github.com/Smirn-Ewan) pour l'idée de l'application et la correction de bugs
 - [PokéAPI](https://pokeapi.co/) - API Pokémon complète
 - [Tesseract OCR](https://github.com/tesseract-ocr/tesseract) - Moteur de reconnaissance de texte
 - [PySide6](https://pypi.org/project/PySide6/) - Framework GUI Qt
