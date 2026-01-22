@@ -79,16 +79,18 @@ class PokemonAnalysisTable(QTableWidget):
         super().__init__(parent)
         self._setup_table()
 
-    def _get_cell_color(self, multiplier: float) -> str:
+    def _get_cell_color(self, multiplier: float, col: int) -> str:
         """
-        Retourne la couleur de fond de cellule en fonction du multiplicateur
-
-        Args:
-            multiplier: Multiplicateur de dégâts (0, 0.25, 0.5, 1, 2, 4)
-
-        Returns:
-            Code couleur hexadécimal
+        Retourne la couleur de fond de cellule en fonction du multiplicateur et de la colonne
         """
+        # Si c'est la colonne "Super efficace" (index 3), on utilise des couleurs différentes
+        if col == 3:
+            if multiplier >= 4:
+                return "#8855FF"  # Violet pour x4
+            elif multiplier >= 2:
+                return "#AAAAFF"  # Bleu-Violet clair pour x2
+            
+        # Logique par défaut pour les autres colonnes (Faiblesses, Résistances, Immunités)
         if multiplier >= 4:
             return "#FF7777"  # Rouge foncé pour x4
         elif multiplier >= 2:
@@ -240,7 +242,7 @@ class PokemonAnalysisTable(QTableWidget):
             item.setFlags(Qt.NoItemFlags)
 
             # Applique la couleur de fond en fonction du multiplicateur
-            bg_color = self._get_cell_color(data['multiplier'])
+            bg_color = self._get_cell_color(data['multiplier'], col)
             item.setBackground(QColor(bg_color))
 
             self.setItem(row, col, item)

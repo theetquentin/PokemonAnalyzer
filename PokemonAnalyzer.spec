@@ -79,12 +79,87 @@ a = Analysis(
         'pandas',
         'IPython',
         'notebook',
+        'tkinter',
+        '_tkinter',
+        'tcl',
+        'tk',
+        'unittest',
+        'pydoc',
+        # Exclusions PySide6 pour réduire la taille (Gain: ~50-100 Mo)
+        'PySide6.QtNetwork',
+        'PySide6.QtWebEngine',
+        'PySide6.QtWebEngineCore',
+        'PySide6.QtWebEngineWidgets',
+        'PySide6.Qt3DInput',
+        'PySide6.Qt3DCore',
+        'PySide6.Qt3DExtras',
+        'PySide6.Qt3DRender',
+        'PySide6.Qt3DLogic',
+        'PySide6.QtQuick',
+        'PySide6.QtQuickWidgets',
+        'PySide6.QtQuickShapes',
+        'PySide6.QtQml',
+        'PySide6.QtSql',
+        'PySide6.QtTest',
+        'PySide6.QtMultimedia',
+        'PySide6.QtMultimediaWidgets',
+        'PySide6.QtTextToSpeech',
+        'PySide6.QtDesigner',
+        'PySide6.QtHelp',
+        'PySide6.QtSensors',
+        'PySide6.QtSerialPort',
+        'PySide6.QtCharts',
+        'PySide6.QtSpatialAudio',
+        'PySide6.QtBluetooth',
+        'PySide6.QtNfc',
+        'PySide6.QtLocation',
+        'PySide6.QtPositioning',
+        'PySide6.QtWebChannel',
+        'PySide6.QtWebSockets',
     ],
     win_no_prefer_redirects=False,
     win_private_assemblies=False,
     cipher=block_cipher,
     noarchive=False,
 )
+
+# --- OPTIMISATION TAILLE AVANCÉE ---
+# Exclut les DLLs volumineuses non utilisées
+excluded_binaries = [
+    'opencv_videoio_ffmpeg',  # Vidéo I/O (on ne traite que des images)
+    'opengl32sw.dll',         # Rendu software OpenGL (lourd)
+    'Qt6Quick',               # QML non utilisé
+    'Qt6Qml',                 # QML non utilisé
+    'Qt6Pdf',                 # PDF non utilisé
+    'Qt6Network',             # Non utilisé (requests est utilisé à la place)
+    'Qt6VirtualKeyboard',
+    'D3Dcompiler_47.dll',     # Souvent inutile si pas de 3D complexe
+    'tcl',                    # Tcl/Tk
+    'tk',                     # Tcl/Tk
+    # 'libicudt',             # RESTAURÉ: Requis pour le Japonais/Unicode
+    
+    # Exclusions Tesseract Graphiques (Probablement inutiles pour l'OCR pur)
+    'libpango',               # Pango (Rendu texte)
+    'libcairo',               # Cairo (Graphisme)
+    'libglib',                # GLib
+    'libharfbuzz',            # Harfbuzz
+]
+
+print("Analyse des binaires à exclure...")
+new_binaries = []
+for (name, path, typecode) in a.binaries:
+    should_exclude = False
+    for exclusion in excluded_binaries:
+        if exclusion.lower() in name.lower():
+            print(f"  [EXCLUSION] {name}")
+            should_exclude = True
+            break
+            
+    if not should_exclude:
+        new_binaries.append((name, path, typecode))
+
+a.binaries = new_binaries
+# -----------------------------------
 
 # Fichiers Python compilés
 pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)

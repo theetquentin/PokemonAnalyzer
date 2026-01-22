@@ -11,7 +11,7 @@
 
 ### Option 1 : Utiliser l'exécutable (RECOMMANDÉ - Pour utilisateurs)
 
-1. Allez dans [**Releases**](https://github.com/VOTRE_USERNAME/PokemonAnalyzer/releases)
+1. Allez dans [**Releases**](https://github.com/theetquentin/PokemonAnalyzer/releases)
 2. Téléchargez **PokemonAnalyzer.exe** (dernière version)
 3. Double-cliquez sur l'exécutable
 4. **C'est tout !** L'application démarre immédiatement.
@@ -198,7 +198,7 @@ Ce projet n'est pas affilié, sponsorisé ou approuvé par Nintendo, Game Freak 
 
 ## 🙏 Remerciements
 
-- Smirn pour l'idée de l'application et la correction de bugs
+- Smirn(https://github.com/Smirn-Ewan) pour l'idée de l'application et la correction de bugs
 - [PokéAPI](https://pokeapi.co/) - API Pokémon complète
 - [Tesseract OCR](https://github.com/tesseract-ocr/tesseract) - Moteur de reconnaissance de texte
 - [PySide6](https://pypi.org/project/PySide6/) - Framework GUI Qt

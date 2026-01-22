@@ -76,10 +76,11 @@ class MainWindow(QMainWindow):
         self.lang_combo.setFixedWidth(120)
 
         # TODO: Connecter le changement de langue
+        self.lang_combo.currentTextChanged.connect(self.change_language)
         
         header_layout.addWidget(self.lang_combo)
         main_layout.addLayout(header_layout)
-        
+
         # Onglets
         self.tabs = QTabWidget()
         
@@ -123,6 +124,30 @@ class MainWindow(QMainWindow):
 
         self.search_tab = SearchTab()
         self.tabs.addTab(self.search_tab, t('tab_search'))
+        
+        
+    def change_language(self, language_name):
+        """Gère le changement de langue depuis l'UI"""
+        lang_map = {
+            "Français": "fr",
+            "English": "en",
+            "Deutsch": "de",
+            "Español": "es",
+            "Italiano": "it",
+            "日本語": "ja"
+        }
+        lang_code = lang_map.get(language_name, "en")
+        
+        # Change la langue globale
+        from core.translations import set_language
+        set_language(lang_code)
+        self.update_translations()
+        
+        # Notifie les onglets
+        if hasattr(self, 'live_capture_tab') and hasattr(self.live_capture_tab, 'presenter'):
+            self.live_capture_tab.presenter.update_language(lang_code)
+            
+        print(f"[INFO] Langue changée pour : {language_name} ({lang_code})")
         
     def show_status_message(self, message, timeout=0):
         """Affiche un message dans la barre de statut"""

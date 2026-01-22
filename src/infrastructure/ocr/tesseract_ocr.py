@@ -31,11 +31,59 @@ elif getattr(sys, 'frozen', False):
         print(f"[DEBUG] PyInstaller détecté, dossier extraction: {exe_dir}")
     else:
         # Nuitka (--onefile ou --standalone)
-        # En mode --onefile, __file__ pointe vers le dossier d'extraction temporaire
-        # En mode --standalone, __file__ pointe vers le dossier contenant les modules
-        # Utiliser __file__ au lieu de sys.executable car sys.executable pointe vers l'exe original !
-        exe_dir = PathLib(__file__).parent.parent.parent  # tesseract_ocr.py -> ocr -> infrastructure -> root
-        print(f"[DEBUG] Nuitka détecté, dossier extraction/exe: {exe_dir}")
+        # En mode --onefile, les fichiers sont extraits dans un dossier temporaire
+        print(f"[DEBUG] Nuitka détecté")
+        
+        # DEBUG: Affiche tous les chemins pour comprendre où on est
+        print(f"[DEBUG] sys.executable = {sys.executable}")
+        print(f"[DEBUG] __file__ = {__file__}")
+        print(f"[DEBUG] sys.argv[0] = {sys.argv[0] if sys.argv else 'N/A'}")
+        
+        # En mode --onefile Nuitka, il faut trouver le dossier d'extraction temporaire
+        # Plusieurs méthodes à essayer :
+        
+        # Méthode 1: Dossier basé sur __file__ (le plus fiable pour --onefile)
+        # __file__ pointe vers le fichier .pyc dans le dossier temporaire
+        # Structure probable: TEMP/onefile_XXX/infrastructure/ocr/tesseract_ocr.pyc
+        # Donc on remonte de 3 niveaux pour atteindre la racine
+        exe_dir_1 = PathLib(__file__).resolve().parent.parent.parent
+        print(f"[DEBUG] Méthode 1 (__file__.parent x3): {exe_dir_1}")
+        print(f"[DEBUG]   - Contenu: {list(exe_dir_1.iterdir())[:10] if exe_dir_1.exists() else 'N/A'}")
+        
+        # Méthode 2: Dossier de sys.executable
+        exe_dir_2 = PathLib(sys.executable).parent
+        print(f"[DEBUG] Méthode 2 (sys.executable.parent): {exe_dir_2}")
+        
+        # Méthode 3: Dossier courant (certaines versions de Nuitka l'utilisent)
+        exe_dir_3 = PathLib.cwd()
+        print(f"[DEBUG] Méthode 3 (cwd): {exe_dir_3}")
+        
+        # Méthode 4: Dossier de sys.argv[0]
+        exe_dir_4 = PathLib(sys.argv[0]).parent if sys.argv else None
+        print(f"[DEBUG] Méthode 4 (sys.argv[0].parent): {exe_dir_4}")
+        
+        # Méthode 5: Variable d'environnement NUITKA_ONEFILE_PARENT (si définie)
+        exe_dir_5 = PathLib(os.environ['NUITKA_ONEFILE_PARENT']) if 'NUITKA_ONEFILE_PARENT' in os.environ else None
+        print(f"[DEBUG] Méthode 5 (NUITKA_ONEFILE_PARENT): {exe_dir_5}")
+        
+        # Teste chaque méthode pour voir laquelle contient 'tesseract/'
+        possible_base_dirs = [d for d in [exe_dir_1, exe_dir_2, exe_dir_3, exe_dir_4, exe_dir_5] if d]
+        
+        exe_dir = None
+        print(f"[DEBUG] Recherche de 'tesseract/' dans {len(possible_base_dirs)} emplacements...")
+        for i, base_dir in enumerate(possible_base_dirs, 1):
+            tesseract_subdir = base_dir / 'tesseract'
+            print(f"[DEBUG] Essai {i}: {tesseract_subdir} -> {'EXISTE' if tesseract_subdir.exists() else 'N/A'}")
+            if tesseract_subdir.exists():
+                exe_dir = base_dir
+                print(f"[DEBUG] ✓ Dossier d'extraction trouvé: {exe_dir}")
+                break
+        
+        if not exe_dir:
+            # Fallback: utilise le premier dossier de la liste
+            exe_dir = exe_dir_1
+            print(f"[DEBUG] ⚠ Aucun dossier avec 'tesseract/' trouvé")
+            print(f"[DEBUG] Utilisation du dossier par défaut: {exe_dir}")
 
     # Cherche Tesseract dans plusieurs emplacements possibles
     possible_locations = [
@@ -102,7 +150,9 @@ class TesseractOCR:
             'default': '--oem 3 --psm 6 -c tessedit_char_whitelist=ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝÞßàáâãäåæçèéêëìíîïðñòóôõöøùúûüýþÿ♀♂.-',
             'single_line': '--oem 3 --psm 7 -c tessedit_char_whitelist=ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝÞßàáâãäåæçèéêëìíîïðñòóôõöøùúûüýþÿ♀♂.-',
             'single_word': '--oem 3 --psm 8 -c tessedit_char_whitelist=ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝÞßàáâãäåæçèéêëìíîïðñòóôõöøùúûüýþÿ♀♂.-',
-            'french': '--oem 3 --psm 6 -l fra'
+            'french': '--oem 3 --psm 6 -l fra',
+            'japanese': '--oem 3 --psm 6 -l jpn',
+            'multi': '--oem 3 --psm 6 -l eng+fra+jpn'
         }
         
         # Patterns de nettoyage du texte
@@ -126,6 +176,26 @@ class TesseractOCR:
         """
         self.pokemon_names = pokemon_names_list or []
         self.normalized_names = {self._normalize_name(name): name for name in self.pokemon_names}
+        
+    def check_language_availability(self, lang_code: str) -> bool:
+        """Vérifie si le pack de langue est installé"""
+        try:
+            available_langs = pytesseract.get_languages()
+            # Mapping code custom -> code tesseract
+            tess_code = {
+                'ja': 'jpn',
+                'jp': 'jpn',
+                'fr': 'fra',
+                'en': 'eng'
+            }.get(lang_code, lang_code)
+            
+            if tess_code not in available_langs:
+                print(f"[ATTENTION] Pack de langue '{tess_code}' manquant pour Tesseract! (Disponibles: {available_langs})")
+                return False
+            return True
+        except Exception as e:
+            print(f"[ERREUR] Impossible de vérifier les langues Tesseract: {e}")
+            return False
 
     def _normalize_name(self, name: str) -> str:
         """Normalise un nom pour la comparaison (gère tous les accents français)"""
@@ -246,63 +316,52 @@ class TesseractOCR:
             Liste des résultats avec méthode utilisée et confiance
         """
         results = []
-        
         try:
-            # Méthode 1: OpenCV preprocessing + Tesseract
-            for preprocess_method in ['adaptive', 'threshold', 'enhanced']:
-                try:
-                    processed_img = self.preprocess_image(image_path, preprocess_method)
-                    
-                    for config_name, config in self.tesseract_config.items():
-                        try:
-                            text = pytesseract.image_to_string(processed_img, config=config).strip()
-                            if text:
-                                results.append({
-                                    'text': text,
-                                    'method': f'opencv_{preprocess_method}_{config_name}',
-                                    'confidence': 0.7
-                                })
-                        except Exception as e:
-                            continue
-                
-                except Exception as e:
-                    continue
+            # OPTIMISATION: Test dans l'ordre et arrêt dès qu'un résultat est trouvé
             
-            # Méthode 2: PIL enhancement + Tesseract
+            # Méthode 1 (RAPIDE): PIL enhancement + multi-langue (fonctionne 80% du temps)
             try:
                 enhanced_img = self.enhance_with_pil(image_path)
-                
-                for config_name, config in self.tesseract_config.items():
-                    try:
-                        text = pytesseract.image_to_string(enhanced_img, config=config).strip()
-                        if text:
-                            results.append({
-                                'text': text,
-                                'method': f'pil_enhanced_{config_name}',
-                                'confidence': 0.8
-                            })
-                    except Exception as e:
-                        continue
-            
-            except Exception as e:
-                pass
-            
-            # Méthode 3: Image originale directe
-            try:
-                original_img = Image.open(image_path)
-                text = pytesseract.image_to_string(original_img, config=self.tesseract_config['french']).strip()
+                text = pytesseract.image_to_string(enhanced_img, config=self.tesseract_config['multi']).strip()
                 if text:
                     results.append({
                         'text': text,
-                        'method': 'original_french',
-                        'confidence': 0.6
+                        'method': 'pil_enhanced_multi',
+                        'confidence': 0.9
                     })
-            except Exception as e:
+                    return results  # STOP ICI si trouvé! (1 seul appel OCR)
+            except Exception:
                 pass
-        
+            
+            # Méthode 2 (FALLBACK): Adaptive threshold
+            try:
+                processed_img = self.preprocess_image(image_path, 'adaptive')
+                text = pytesseract.image_to_string(processed_img, config=self.tesseract_config['multi']).strip()
+                if text:
+                    results.append({
+                        'text': text,
+                        'method': 'opencv_adaptive_multi',
+                        'confidence': 0.8
+                    })
+                    return results  # STOP ICI (2 appels OCR max)
+            except Exception:
+                pass
+            
+            # Méthode 3 (LAST RESORT): Image originale
+            try:
+                from PIL import Image
+                original_img = Image.open(image_path)
+                text = pytesseract.image_to_string(original_img, config=self.tesseract_config['multi']).strip()
+                if text:
+                    results.append({
+                        'text': text,
+                        'method': 'original_multi',
+                        'confidence': 0.7
+                    })
+            except Exception:
+                pass
         except Exception as e:
             print(f"Erreur lors de l'extraction OCR: {e}")
-        
         return results
     
     def clean_text(self, text: str) -> str:

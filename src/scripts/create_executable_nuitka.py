@@ -7,13 +7,19 @@ import sys
 import subprocess
 import shutil
 from pathlib import Path
+import urllib.request
+import zipfile
 
-# Change le répertoire de travail à la racine du projet
-script_dir = Path(__file__).parent.parent.parent
-os.chdir(script_dir)
+# URLs pour téléchargement automatique si absent
+TESSERACT_URL = "https://digi.bib.uni-mannheim.de/tesseract/tesseract-ocr-w64-setup-5.3.3.20231005.exe"
+
 
 # Chemin de Tesseract
 TESSERACT_DIR = Path("build/tesseract")
+
+# URL de UPX pour la compression
+UPX_URL = "https://github.com/upx/upx/releases/download/v4.2.1/upx-4.2.1-win64.zip"
+UPX_DIR = Path("build/upx")
 
 
 def print_step(step, message):
@@ -82,11 +88,21 @@ def prepare_tesseract():
 
         if tessdata_src.exists():
             print("[INFO] Copie des donnees linguistiques (tessdata)...")
-            if tessdata_dst.exists():
-                shutil.rmtree(tessdata_dst)
-            shutil.copytree(tessdata_src, tessdata_dst)
-            traineddata_files = list(tessdata_dst.glob("*.traineddata"))
-            print(f"  [OK] {len(traineddata_files)} fichiers de langues copies")
+            
+            # Liste des langues à conserver
+            langs_to_keep = ["eng", "fra", "jpn"]
+            
+            if not tessdata_dst.exists():
+                tessdata_dst.mkdir(parents=True)
+                
+            copied_count = 0
+            for lang in langs_to_keep:
+                # Cherche tous les fichiers commençant par le code langue
+                for src_file in tessdata_src.glob(f"{lang}*"):
+                    shutil.copy2(src_file, tessdata_dst / src_file.name)
+                    copied_count += 1
+            
+            print(f"  [OK] {copied_count} fichiers de langues copies (Filtre: {langs_to_keep})")
 
         total_size = sum(f.stat().st_size for f in TESSERACT_DIR.rglob("*") if f.is_file())
         print(f"[OK] Tesseract prepare ({total_size / (1024*1024):.1f} MB)")
@@ -95,6 +111,57 @@ def prepare_tesseract():
     except Exception as e:
         print(f"[ERREUR] Erreur lors de la copie : {e}")
         return False
+
+
+def download_upx():
+    """Télécharge et installe UPX pour la compression"""
+    print_step("X/8", "PRÉPARATION DE UPX (COMPRESSION)")
+    
+    if UPX_DIR.exists() and (UPX_DIR / "upx.exe").exists():
+        print(f"[OK] UPX déjà présent dans {UPX_DIR}")
+        return True
+        
+    print(f"[INFO] Téléchargement de UPX depuis {UPX_URL}...")
+    try:
+        # Téléchargement
+        zip_path = Path("build/upx.zip")
+        UPX_DIR.parent.mkdir(parents=True, exist_ok=True)
+        
+        # User-Agent pour éviter 403 Forbidden sur GitHub
+        req = urllib.request.Request(
+            UPX_URL, 
+            data=None, 
+            headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
+        )
+        
+        with urllib.request.urlopen(req) as response, open(zip_path, 'wb') as out_file:
+            shutil.copyfileobj(response, out_file)
+            
+        print("[INFO] Extraction de UPX...")
+        with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+            # Cherche le dossier interne
+            upx_exe_path = None
+            for file in zip_ref.namelist():
+                if file.endswith("upx.exe"):
+                    upx_exe_path = file
+                    break
+                    
+            if upx_exe_path:
+                UPX_DIR.mkdir(exist_ok=True)
+                with zip_ref.open(upx_exe_path) as source, open(UPX_DIR / "upx.exe", "wb") as target:
+                    shutil.copyfileobj(source, target)
+                print(f"[OK] UPX extrait vers {UPX_DIR}")
+                
+        # Nettoyage
+        if zip_path.exists():
+            os.remove(zip_path)
+            
+        return True
+        
+    except Exception as e:
+        print(f"[ERREUR] Impossible de télécharger UPX: {e}")
+        print("         La compression sera désactivée.")
+        return True # Continue sans UPX
 
 
 def check_nuitka():
@@ -182,7 +249,7 @@ def verify_dependencies():
     print_step("5/8", "VÉRIFICATION DES DÉPENDANCES")
 
     required_packages = [
-        'PySide6',
+        'PySide6-Essentials',
         'pytesseract',
         'Pillow',
         'opencv-python',
@@ -194,7 +261,7 @@ def verify_dependencies():
     package_to_module = {
         'opencv-python': 'cv2',
         'Pillow': 'PIL',
-        'PySide6': 'PySide6'
+        'PySide6-Essentials': 'PySide6'
     }
 
     missing = []
@@ -311,7 +378,8 @@ def build_with_nuitka():
         # Les fichiers de données sont extraits dans un dossier temporaire au lancement
         '--onefile',
 
-        # Console activée pour DEBUG (retirer après debug)
+        # Console désactivée (pas de fenêtre CMD)
+        # TEMPORAIREMENT ACTIVÉE POUR DEBUG TESSERACT
         # '--windows-disable-console',
 
         # Nom de l'exécutable
@@ -322,7 +390,7 @@ def build_with_nuitka():
 
         # Optimisations et plugins
         '--enable-plugin=pyside6',
-        '--enable-plugin=tk-inter',  # Plugin pour tkinter (sélection de zone)
+        # Tkinter n'est plus utilisé (sélection de région gérée par PySide6)
         '--follow-imports',
 
         # Force Nuitka à utiliser son propre compilateur MinGW (évite les conflits avec MSYS2)
@@ -374,15 +442,16 @@ def build_with_nuitka():
         '--remove-output',  # Supprime les fichiers temporaires
         '--assume-yes-for-downloads',  # Accepte automatiquement les téléchargements
 
-        # Exclure les modules non utilisés pour réduire la taille (GARDE tkinter)
+        # Exclure les modules non utilisés pour réduire la taille
         '--nofollow-import-to=unittest',
         '--nofollow-import-to=test',
         '--nofollow-import-to=distutils',
-
-        # NOTE: Ne PAS ajouter --nofollow-import-to=tkinter même si Nuitka le suggère
-        # tkinter est utilisé pour la sélection interactive de région d'écran (screen_capture.py)
-        # Le warning "tkinter redondant avec PySide6" est un FAUX POSITIF
-
+        # tkinter, tcl, tk exclus car non utilisés (remplacés par PySide6)
+        '--nofollow-import-to=tkinter',
+        '--nofollow-import-to=tcl',
+        '--nofollow-import-to=tk',
+        '--nofollow-import-to=_tkinter',
+        
         # Amélioration des performances de compilation
         '--jobs=4',  # Utilise 4 threads pour accélérer la compilation
     ])
@@ -458,6 +527,7 @@ def main():
     # Étapes de compilation
     steps = [
         ("Préparation de Tesseract", prepare_tesseract),
+        ("Préparation de UPX", download_upx),
         ("Vérification de Nuitka", check_nuitka),
         ("Vérification du compilateur", check_c_compiler),
         ("Nettoyage", clean_previous_builds),
@@ -481,7 +551,7 @@ def main():
     print("       Un seul fichier à distribuer - Aucune installation requise !")
     print("\n[INFO] Contenu intégré (extrait au lancement) :")
     print("       - Tesseract-OCR complet (tesseract/)")
-    print("       - tkinter + Tcl/Tk (sélection de zone)")
+    print("       - PySide6 (interface graphique et sélection de zone)")
     print("       - Icônes des types Pokémon")
     print("       - Toutes les dépendances Python")
     print("\n[INFO] Avantages Nuitka --onefile :")

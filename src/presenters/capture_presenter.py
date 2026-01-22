@@ -70,30 +70,93 @@ class CapturePresenter(QObject):
     def select_region(self):
         """Gère la sélection de région"""
         # Cache la fenêtre principale via la vue
-        parent_window = self.view.window()
-        if parent_window:
-            parent_window.showMinimized()
+        self._parent_window = self.view.window()
+        if self._parent_window:
+            self._parent_window.showMinimized()
 
-        # Sélectionne la région
-        success = self.capture_service.select_region_interactive()
+        # Lance le sélecteur de région (PySide6)
+        from ui.widgets.region_selector import RegionSelector
+        self._region_selector = RegionSelector()
+        self._region_selector.selection_confirmed.connect(self._on_region_selected)
+        self._region_selector.selection_cancelled.connect(self._on_region_cancelled)
+        self._region_selector.show()
+        
+        # Active la fenêtre et donne le focus pour capturer les événements clavier (Echap)
+        self._region_selector.raise_()
+        self._region_selector.activateWindow()
+        self._region_selector.setFocus()
 
+    def _on_region_selected(self, region_dict):
+        """Callback quand une région est sélectionnée"""
+        from core.entities import CaptureRegion
+        
+        # Met à jour le service
+        region = CaptureRegion(
+            left=region_dict['left'],
+            top=region_dict['top'],
+            width=region_dict['width'],
+            height=region_dict['height']
+        )
+        self.capture_service.set_region(region)
+        
         # Restaure la fenêtre
-        if parent_window:
-            parent_window.showNormal()
-            parent_window.raise_()
-            parent_window.activateWindow()
+        if hasattr(self, '_parent_window') and self._parent_window:
+            self._parent_window.showNormal()
+            self._parent_window.raise_()
+            self._parent_window.activateWindow()
+            self._parent_window = None
 
-        if success and self.capture_service.region:
-            region = self.capture_service.region
-            self.view.update_region_info(region.width, region.height)
-            self.view.set_status("Zone sélectionnée")
-            self.view.enable_capture_controls(True)
+        # Mise à jour UI
+        self.view.update_region_info(region.width, region.height)
+        self.view.set_status("Zone sélectionnée")
+        self.view.enable_capture_controls(True)
+        
+        # Démarre automatiquement la capture
+        self.view.show_info("Succès", "Zone sélectionnée ! Capture automatique démarrée.")
+        if hasattr(self, '_parent_window') and self._parent_window:
+            self._parent_window.showNormal()
+            self._parent_window.raise_()
+        
+        # Démarre automatiquement la capture
+        self.start_capture()
+        
+        # Nettoyage
+        self._region_selector = None
+
+    def update_language(self, lang_code):
+        """Met à jour la configuration OCR selon la langue"""
+        # Mise à jour des noms de Pokémon pour l'OCR
+        pokemon_names = self.pokeapi_service.get_all_pokemon_names()
+        self.capture_service.ocr.update_pokemon_names(pokemon_names)
+        
+        # Mise à jour de la config Tesseract
+        if lang_code == 'ja':
+            if not self.capture_service.ocr.check_language_availability('ja'):
+                self.view.show_warning(
+                    "Pack de langue manquant", 
+                    "Le pack de langue 'Japanese' (jpn) n'est pas installé pour Tesseract.\n"
+                    "L'OCR ne pourra pas lire les caractères japonais.\n\n"
+                    "Veuillez installer le pack 'jpn.traineddata' dans le dossier tessdata."
+                )
             
-            # Démarre automatiquement la capture
-            self.view.show_info("Succès", "Zone sélectionnée ! Capture automatique démarrée.")
-            self.start_capture()
+            self.capture_service.ocr.tesseract_config = self.capture_service.ocr.tesseract_config['japanese']
+            print(f"[OCR] Changement langue: Japonais (mode: {self.capture_service.ocr.tesseract_config})")
         else:
-            self.view.set_status("Sélection de région annulée")
+            # Par défaut on utilise 'multi' pour supporter Anglais + Français
+            self.capture_service.ocr.tesseract_config = self.capture_service.ocr.tesseract_config['multi']
+            print(f"[OCR] Changement langue: Défaut/Multi (mode: {self.capture_service.ocr.tesseract_config})")
+            
+    def _on_region_cancelled(self):
+        """Callback quand la sélection est annulée"""
+        # Restaure la fenêtre
+        if hasattr(self, '_parent_window') and self._parent_window:
+            self._parent_window.showNormal()
+            self._parent_window.raise_()
+            self._parent_window.activateWindow()
+            self._parent_window = None
+            
+        self.view.set_status("Sélection de région annulée")
+        self._region_selector = None
             
     def save_region(self):
         """Sauvegarde la région"""

@@ -8,9 +8,6 @@ import time
 import threading
 from typing import Optional, Dict, Callable
 from PIL import Image, ImageGrab
-import tkinter as tk
-from tkinter import Canvas
-
 
 class LiveScreenOCR:
     """Gestionnaire de capture d'écran en temps réel"""
@@ -39,97 +36,15 @@ class LiveScreenOCR:
         # Compteur de détections
         self.detection_count = {}
         self.last_confirmed_detection = None  # Dernière détection confirmée et envoyée au callback
-    
+
     def select_region_interactive(self) -> bool:
-        """Sélectionne une région d'écran de manière interactive"""
-        try:
-            # Crée une fenêtre transparente en plein écran
-            root = tk.Tk()
-            root.attributes('-fullscreen', True)
-            root.attributes('-alpha', 0.3)
-            root.attributes('-topmost', True)
-            root.configure(background='gray')
-            
-            # Variables pour stocker la sélection
-            self.selection_start = None
-            self.selection_end = None
-            self.selection_rect = None
-            
-            # Canvas pour dessiner la sélection
-            canvas = Canvas(root, cursor="cross", highlightthickness=0)
-            canvas.pack(fill=tk.BOTH, expand=True)
-            canvas.configure(background='gray')
-            
-            def on_mouse_down(event):
-                self.selection_start = (event.x, event.y)
-                if self.selection_rect:
-                    canvas.delete(self.selection_rect)
-            
-            def on_mouse_drag(event):
-                if self.selection_start:
-                    if self.selection_rect:
-                        canvas.delete(self.selection_rect)
-                    
-                    x1, y1 = self.selection_start
-                    x2, y2 = event.x, event.y
-                    
-                    self.selection_rect = canvas.create_rectangle(
-                        x1, y1, x2, y2,
-                        outline='red',
-                        width=3
-                    )
-            
-            def on_mouse_up(event):
-                self.selection_end = (event.x, event.y)
-                
-                if self.selection_start and self.selection_end:
-                    x1, y1 = self.selection_start
-                    x2, y2 = self.selection_end
-                    
-                    # Normalise les coordonnées
-                    left = min(x1, x2)
-                    top = min(y1, y2)
-                    right = max(x1, x2)
-                    bottom = max(y1, y2)
-                    
-                    self.region = {
-                        'left': left,
-                        'top': top,
-                        'width': right - left,
-                        'height': bottom - top
-                    }
-                    
-                    root.quit()
-            
-            # Bind des événements souris
-            canvas.bind('<Button-1>', on_mouse_down)
-            canvas.bind('<B1-Motion>', on_mouse_drag)
-            canvas.bind('<ButtonRelease-1>', on_mouse_up)
-            
-            # Bind ESC pour annuler
-            root.bind('<Escape>', lambda e: root.quit())
-            
-            # Instructions
-            label = tk.Label(
-                root,
-                text="Cliquez et glissez pour sélectionner la zone • ESC pour annuler",
-                font=('Arial', 14, 'bold'),
-                bg='black',
-                fg='white',
-                padx=20,
-                pady=10
-            )
-            label.place(relx=0.5, rely=0.05, anchor='center')
-            
-            # Lance la boucle
-            root.mainloop()
-            root.destroy()
-            
-            return self.region is not None
-            
-        except Exception as e:
-            print(f"[ERREUR] Erreur sélection région: {e}")
-            return False
+        """
+        Obsolète: La sélection se fait maintenant via l'UI (RegionSelector)
+        Cette méthode est gardée pour compatibilité mais ne fait rien.
+        """
+        print("[WARN] select_region_interactive est obsolète. Utilisez CapturePresenter.")
+        return False
+
     
     def save_region_config(self, filename: str = "screen_region.json") -> bool:
         """Sauvegarde la configuration de région"""

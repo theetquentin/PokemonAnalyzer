@@ -19,6 +19,10 @@ os.chdir(script_dir)
 TESSERACT_URL = "https://digi.bib.uni-mannheim.de/tesseract/tesseract-ocr-w64-setup-5.3.3.20231005.exe"
 TESSERACT_DIR = Path("build/tesseract")
 
+# URL de UPX pour la compression
+UPX_URL = "https://github.com/upx/upx/releases/download/v4.2.1/upx-4.2.1-win64.zip"
+UPX_DIR = Path("build/upx")
+
 
 def print_step(step, message):
     """Affiche une étape du processus"""
@@ -94,14 +98,24 @@ def download_tesseract():
         tessdata_dst = TESSERACT_DIR / "tessdata"
 
         if tessdata_src.exists():
+            # Copie UNIQUEMENT les données linguistiques nécessaires (optimisation taille)
             print("[INFO] Copie des données linguistiques (tessdata)...")
-            if tessdata_dst.exists():
-                shutil.rmtree(tessdata_dst)
-            shutil.copytree(tessdata_src, tessdata_dst)
-
-            # Compte les fichiers .traineddata
-            traineddata_files = list(tessdata_dst.glob("*.traineddata"))
-            print(f"  [OK] {len(traineddata_files)} fichiers de langues copies")
+            
+            # Liste des langues à conserver
+            langs_to_keep = ["eng", "fra", "jpn"] # Japonais ajouté
+            
+            if not tessdata_dst.exists():
+                tessdata_dst.mkdir(parents=True)
+                
+            copied_count = 0
+            for lang in langs_to_keep:
+                # Cherche tous les fichiers commençant par le code langue
+                # ex: fra.traineddata, fra.user-patterns, etc.
+                for src_file in tessdata_src.glob(f"{lang}*"):
+                    shutil.copy2(src_file, tessdata_dst / src_file.name)
+                    copied_count += 1
+            
+            print(f"  [OK] {copied_count} fichiers de langues copies (Filtre: {langs_to_keep})")
         else:
             print("[WARN] Dossier tessdata non trouvé")
 
@@ -117,6 +131,76 @@ def download_tesseract():
         print(f"[ERREUR] Erreur lors de la copie : {e}")
         return False
 
+
+def download_upx():
+    """Télécharge et installe UPX pour la compression"""
+    print_step("X/7", "PRÉPARATION DE UPX (COMPRESSION)")
+    
+    if UPX_DIR.exists() and (UPX_DIR / "upx.exe").exists():
+        print(f"[OK] UPX déjà présent dans {UPX_DIR}")
+        return True
+        
+    print(f"[INFO] Téléchargement de UPX depuis {UPX_URL}...")
+    try:
+        # Téléchargement
+        zip_path = Path("build/upx.zip")
+        UPX_DIR.parent.mkdir(parents=True, exist_ok=True)
+        
+        # User-Agent pour éviter 403 Forbidden sur GitHub
+        req = urllib.request.Request(
+            UPX_URL, 
+            data=None, 
+            headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
+        )
+        
+        with urllib.request.urlopen(req) as response, open(zip_path, 'wb') as out_file:
+            shutil.copyfileobj(response, out_file)
+            
+        print("[INFO] Extraction de UPX...")
+        with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+            # Cherche le dossier interne
+            upx_exe_path = None
+            for file in zip_ref.namelist():
+                if file.endswith("upx.exe"):
+                    upx_exe_path = file
+                    break
+                    
+            if upx_exe_path:
+                UPX_DIR.mkdir(exist_ok=True)
+                with zip_ref.open(upx_exe_path) as source, open(UPX_DIR / "upx.exe", "wb") as target:
+                    shutil.copyfileobj(source, target)
+                print(f"[OK] UPX extrait vers {UPX_DIR}")
+                
+        # Nettoyage
+        if zip_path.exists():
+            os.remove(zip_path)
+            
+        return True
+        
+    except Exception as e:
+        print(f"[ERREUR] Impossible de télécharger UPX: {e}")
+        print("         La compression sera désactivée.")
+        return True # On continue même sans UPX, c'est optionnel pour le build
+            
+
+def check_dependencies():
+    """Vérifie que les dépendances (PySide6-Essentials) sont installées"""
+    print_step("0/7", "VÉRIFICATION DES DÉPENDANCES")
+    
+    try:
+        import PySide6
+        print(f"[OK] PySide6 détecté : {PySide6.__version__}")
+        print(f"     Chemin : {os.path.dirname(PySide6.__file__)}")
+        
+        # Vérification optionnelle pour voir si c'est Essentials
+        # (Difficile à vérifier programmatiquement de manière fiable sans pip, 
+        #  mais on suppose que l'utilisateur a suivi les instructions)
+        return True
+    except ImportError:
+        print("[ERREUR] PySide6 n'est pas installé.")
+        print("         Veuillez installer PySide6-Essentials :")
+        print("         pip install PySide6-Essentials>=6.5.0")
+        return False
 
 def check_pyinstaller():
     """Vérifie et installe PyInstaller si nécessaire"""
@@ -226,12 +310,87 @@ a = Analysis(
         'pandas',
         'IPython',
         'notebook',
+        'tkinter',
+        '_tkinter',
+        'tcl',
+        'tk',
+        'unittest',
+        'pydoc',
+        # Exclusions PySide6 pour réduire la taille (Gain: ~50-100 Mo)
+        'PySide6.QtNetwork',
+        'PySide6.QtWebEngine',
+        'PySide6.QtWebEngineCore',
+        'PySide6.QtWebEngineWidgets',
+        'PySide6.Qt3DInput',
+        'PySide6.Qt3DCore',
+        'PySide6.Qt3DExtras',
+        'PySide6.Qt3DRender',
+        'PySide6.Qt3DLogic',
+        'PySide6.QtQuick',
+        'PySide6.QtQuickWidgets',
+        'PySide6.QtQuickShapes',
+        'PySide6.QtQml',
+        'PySide6.QtSql',
+        'PySide6.QtTest',
+        'PySide6.QtMultimedia',
+        'PySide6.QtMultimediaWidgets',
+        'PySide6.QtTextToSpeech',
+        'PySide6.QtDesigner',
+        'PySide6.QtHelp',
+        'PySide6.QtSensors',
+        'PySide6.QtSerialPort',
+        'PySide6.QtCharts',
+        'PySide6.QtSpatialAudio',
+        'PySide6.QtBluetooth',
+        'PySide6.QtNfc',
+        'PySide6.QtLocation',
+        'PySide6.QtPositioning',
+        'PySide6.QtWebChannel',
+        'PySide6.QtWebSockets',
     ],
     win_no_prefer_redirects=False,
     win_private_assemblies=False,
     cipher=block_cipher,
     noarchive=False,
 )
+
+# --- OPTIMISATION TAILLE AVANCÉE ---
+# Exclut les DLLs volumineuses non utilisées
+excluded_binaries = [
+    'opencv_videoio_ffmpeg',  # Vidéo I/O (on ne traite que des images)
+    'opengl32sw.dll',         # Rendu software OpenGL (lourd)
+    'Qt6Quick',               # QML non utilisé
+    'Qt6Qml',                 # QML non utilisé
+    'Qt6Pdf',                 # PDF non utilisé
+    'Qt6Network',             # Non utilisé (requests est utilisé à la place)
+    'Qt6VirtualKeyboard',
+    'D3Dcompiler_47.dll',     # Souvent inutile si pas de 3D complexe
+    'tcl',                    # Tcl/Tk
+    'tk',                     # Tcl/Tk
+    # 'libicudt',             # RESTAURÉ: Requis pour le Japonais/Unicode
+    
+    # Exclusions Tesseract Graphiques (Probablement inutiles pour l'OCR pur)
+    'libpango',               # Pango (Rendu texte)
+    'libcairo',               # Cairo (Graphisme)
+    'libglib',                # GLib
+    'libharfbuzz',            # Harfbuzz
+]
+
+print("Analyse des binaires à exclure...")
+new_binaries = []
+for (name, path, typecode) in a.binaries:
+    should_exclude = False
+    for exclusion in excluded_binaries:
+        if exclusion.lower() in name.lower():
+            print(f"  [EXCLUSION] {name}")
+            should_exclude = True
+            break
+            
+    if not should_exclude:
+        new_binaries.append((name, path, typecode))
+
+a.binaries = new_binaries
+# -----------------------------------
 
 # Fichiers Python compilés
 pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
@@ -317,8 +476,18 @@ def build_with_pyinstaller():
 
     try:
         # Essaye d'abord avec la commande pyinstaller
+        # Construit la commande de base
+        cmd = ['pyinstaller', 'PokemonAnalyzer.spec', '--clean', '--noconfirm', '--distpath=dist/pyinstaller']
+        
+        # Ajoute UPX si présent
+        if (UPX_DIR / "upx.exe").exists():
+            print(f"[INFO] Utilisation de UPX pour la compression (Chemin: {UPX_DIR})")
+            cmd.append(f'--upx-dir={UPX_DIR.absolute()}')
+        else:
+            print("[WARN] UPX non trouvé, pas de compression")
+
         result = subprocess.run(
-            ['pyinstaller', 'PokemonAnalyzer.spec', '--clean', '--noconfirm', '--distpath=dist/pyinstaller'],
+            cmd,
             check=True,
             capture_output=False  # Affiche la sortie en temps réel
         )
@@ -328,8 +497,12 @@ def build_with_pyinstaller():
         print("\n[WARN] Commande 'pyinstaller' non trouvée")
         print("       Tentative avec 'python -m PyInstaller'...\n")
         try:
+            cmd = [sys.executable, '-m', 'PyInstaller', 'PokemonAnalyzer.spec', '--clean', '--noconfirm', '--distpath=dist/pyinstaller']
+            if (UPX_DIR / "upx.exe").exists():
+                cmd.append(f'--upx-dir={UPX_DIR.absolute()}')
+                
             result = subprocess.run(
-                [sys.executable, '-m', 'PyInstaller', 'PokemonAnalyzer.spec', '--clean', '--noconfirm', '--distpath=dist/pyinstaller'],
+                cmd,
                 check=True,
                 capture_output=False
             )
@@ -460,7 +633,9 @@ def main():
 
     # Étapes de construction
     steps = [
+        ("Vérification des dépendances", check_dependencies),
         ("Préparation de Tesseract", download_tesseract),
+        ("Préparation de UPX", download_upx),
         ("Vérification de PyInstaller", check_pyinstaller),
         ("Création du fichier spec", create_spec_file),
         ("Création du runtime hook", create_runtime_hook),
